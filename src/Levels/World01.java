@@ -22,6 +22,7 @@ public class World01 extends Level{
     om.objects[3] = new DoorObj(10, 7);
     this.monstM = new MonsterManager(gp);
     monstM.monsters[0] = new CreatureMonst(gp, 10, 17);
+    monstM.monsters[1] = new CreatureMonst(gp, 18, 19);
 
   }
 

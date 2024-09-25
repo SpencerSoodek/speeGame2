@@ -3,7 +3,6 @@ package tile;
 import Entities.Entity;
 import Levels.Level;
 import java.awt.Graphics2D;
-import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -39,15 +38,15 @@ public class TileManager {
   }
 
   public void getTileTypes() {
-      setup(0, "grass", false);
-      setup(1, "wall", true);
+    setup(0, "grass", false);
+    setup(1, "wall", true);
 
-      setup(2, "water", true);
+    setup(2, "water", true);
 
-      setup(3, "dirt", false);
+    setup(3, "dirt", false);
 
-      setup(4, "tree", true);
-      setup(5, "sand", false);
+    setup(4, "tree", true);
+    setup(5, "sand", false);
   }
 
   public void setup(int index, String imagePath, boolean collision) {
@@ -55,11 +54,11 @@ public class TileManager {
 
     try {
       tileTypes[index] = new Tile();
-      tileTypes[index].image = ImageIO.read(getClass().getResourceAsStream("/tile/"+imagePath+".png"));
+      tileTypes[index].image = ImageIO
+          .read(getClass().getResourceAsStream("/tile/" + imagePath + ".png"));
       tileTypes[index].image = uTool.scaleImage(tileTypes[index].image, gp.tileSize, gp.tileSize);
       tileTypes[index].collision = collision;
-    }
-    catch(IOException e) {
+    } catch (IOException e) {
       e.printStackTrace();
     }
   }
@@ -76,7 +75,8 @@ public class TileManager {
 
         // Loop through columns
         for (int j = 0; j < gp.worldCols; j++) {
-          mapTiles[j][i] = Integer.parseInt(numbers[j]);  // Assign each number to the correct tile in the array
+          mapTiles[j][i] = Integer
+              .parseInt(numbers[j]);  // Assign each number to the correct tile in the array
         }
       }
 
@@ -94,6 +94,10 @@ public class TileManager {
     }
   }
 
+  public boolean collisionAt(int x, int y) {
+    return tileTypes[mapTiles[x][y]].collision;
+  }
+
 
   public void draw(Graphics2D g2) {
     for (int i = 0; i < gp.worldRows; i++) {  // Loop through rows first
@@ -107,11 +111,26 @@ public class TileManager {
         if (screenX > gp.player.screenX - (gp.screenWidth / 2) - 48
             && screenX < gp.player.screenX + (gp.screenWidth / 2) + 48 &&
             screenY < gp.player.screenY + (gp.screenHeight / 2) + 48
-            && screenY > gp.player.screenY - (gp.screenHeight / 2) - 48) {  // Correct the screen bounds check
-          g2.drawImage(tileTypes[t].image, screenX, screenY,null);
+            && screenY > gp.player.screenY - (gp.screenHeight / 2)
+            - 48) {  // Correct the screen bounds check
+          g2.drawImage(tileTypes[t].image, screenX, screenY, null);
         }
       }
     }
 
-}
+  }
+
+  // Check if tile can be walked on by an entity, by whether it exists, is occupied by an object, or is a collidable tile
+  public boolean walkableTile(int x, int y) {
+    if (x < 0 || x >= gp.worldCols || y < 0 || y >= gp.worldRows) {
+      return false;
+    }
+    if (gp.gameLevel.om.objectAt(x, y)) {
+      return false;
+    }
+    if (collisionAt(x, y)) {
+      return false;
+    }
+    return true;
+  }
 }

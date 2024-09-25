@@ -1,35 +1,33 @@
 package Entities;
 
 import java.awt.Point;
-import java.awt.image.BufferedImage;
-import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.PriorityQueue;
 import java.util.Queue;
-import java.util.Random;
-import javax.imageio.ImageIO;
 import main.Direction;
 import main.GamePanel;
-import main.UtilityTool;
-import tile.Tile;
 
-public class CreatureMonst extends Entity{
+public class CreatureMonst extends Entity {
 
   int pathCounter = 0;
   int stepsToResetPath = 5;
-  Direction[] path = new Direction[5];
+  int noPathCooldown = 60;
+  int noPathCooldownCounter = 0;
 
 
   public CreatureMonst(GamePanel gp, int x, int y) {
     super(gp);
     this.col = x;
     this.row = y;
-    this.worldX = col *gp.tileSize;
+    this.worldX = col * gp.tileSize;
     this.worldY = row * gp.tileSize;
     // gp.tileM.occupiedTiles[col][row] = true;
     this.moving = false;
-    this.speed = 1;
+    this.speed = 2;
     this.direction = Direction.DOWN;
     this.stepRate = 60;
     getImage();
@@ -46,20 +44,96 @@ public class CreatureMonst extends Entity{
     down2 = setup("/monsters/creature/creature_down_2");
   }
 
-  private boolean validTile(int x, int y) {
-    return !(x < 0 || x >= gp.worldCols || y < 0 || y >= gp.worldRows);
-  }
 
-  public void setAction() {
-    boolean visitedTiles[][] = new boolean[gp.worldCols][gp.worldRows];
+  // prev attempt. check right angle paths then check bfs.
+  public void bfsPath() {
+    HashSet<Point> visitedTiles = new HashSet<>();
     Queue<Point> queue = new LinkedList<>();
     Point[][] prev = new Point[gp.worldCols][gp.worldRows];
     queue.add(new Point(col, row)); // Start from the monster's current position
     Point playerPoint = new Point(gp.player.col, gp.player.row);
 
+    // Check right angle movement
+    int xDiff = playerPoint.x - col;
+    int yDiff = playerPoint.y - row;
+
+    boolean xValid = true;
+    boolean yValid = true;
+
+    List<Direction> rAPath = new ArrayList<>();
+
+    // Try moving along x-axis
+    if (Math.abs(xDiff) > 0) {
+      for (int i = 0; i < Math.abs(xDiff); i++) {
+        int nextX = col + (xDiff > 0 ? 1 : -1) * (i + 1);
+        if (gp.tileM.walkableTile(nextX, row)) {
+          rAPath.add(xDiff > 0 ? Direction.RIGHT : Direction.LEFT);
+        } else {
+          xValid = false;
+          break;
+        }
+      }
+    }
+
+    // Try moving along y-axis if x-axis was successful
+    if (xValid && Math.abs(yDiff) > 0) {
+      for (int i = 0; i < Math.abs(yDiff); i++) {
+        int nextY = row + (yDiff > 0 ? 1 : -1) * (i + 1);
+        if (gp.tileM.walkableTile(col, nextY)) {
+          rAPath.add(yDiff > 0 ? Direction.DOWN : Direction.UP);
+        } else {
+          yValid = false;
+          break;
+        }
+      }
+    }
+
+    // If right-angle path found, return it.
+    if (xValid && yValid) {
+      path = rAPath.toArray(new Direction[5]);
+      return;
+    }
+
+    // check y then X
+    rAPath.clear();
+    xValid = true;
+    yValid = true;
+
+    // Try moving along y-axis
+    if (Math.abs(yDiff) > 0) {
+      for (int i = 0; i < Math.abs(yDiff); i++) {
+        int nextY = row + (yDiff > 0 ? 1 : -1) * (i + 1);
+        if (gp.tileM.walkableTile(nextY, col)) {
+          rAPath.add(yDiff > 0 ? Direction.DOWN : Direction.UP);
+        } else {
+          yValid = false;
+          break;
+        }
+      }
+    }
+
+    // Try moving along x-axis if x-axis was successful
+    if (yValid && Math.abs(xDiff) > 0) {
+      for (int i = 0; i < Math.abs(xDiff); i++) {
+        int nextX = col + (xDiff > 0 ? 1 : -1) * (i + 1);
+        if (gp.tileM.walkableTile(nextX, row)) {
+          rAPath.add(yDiff > 0 ? Direction.RIGHT : Direction.LEFT);
+        } else {
+          yValid = false;
+          break;
+        }
+      }
+    }
+
+    // If right-angle path found, return it.
+    if (xValid && yValid) {
+      path = rAPath.toArray(new Direction[5]);
+      return;
+    }
+
     while (!queue.isEmpty()) {
       Point p = queue.poll();
-      visitedTiles[p.x][p.y] = true;
+      visitedTiles.add(p);
 
       // Define adjacent tiles
       Point left = new Point(p.x - 1, p.y);
@@ -72,19 +146,19 @@ public class CreatureMonst extends Entity{
       }
 
       // Check adjacent tiles for valid moves (not out of bounds or occupied)
-      if (validTile(left.x, left.y) && !visitedTiles[left.x][left.y] && !gp.gameLevel.om.objectAt(left.x, left.y)) {
+      if (gp.tileM.walkableTile(left.x, left.y) && !visitedTiles.contains(left)) {
         queue.add(left);
         prev[left.x][left.y] = p;
       }
-      if (validTile(right.x, right.y) && !visitedTiles[right.x][right.y] && !gp.gameLevel.om.objectAt(right.x, right.y)) {
+      if (gp.tileM.walkableTile(right.x, right.y) && !visitedTiles.contains(right)) {
         queue.add(right);
         prev[right.x][right.y] = p;
       }
-      if (validTile(up.x, up.y) && !visitedTiles[up.x][up.y] && !gp.gameLevel.om.objectAt(up.x, up.y)) {
+      if (gp.tileM.walkableTile(up.x, up.y) && !visitedTiles.contains(up)) {
         queue.add(up);
         prev[up.x][up.y] = p;
       }
-      if (validTile(down.x, down.y) && !visitedTiles[down.x][down.y] && !gp.gameLevel.om.objectAt(down.x, down.y)) {
+      if (gp.tileM.walkableTile(down.x, down.y) && !visitedTiles.contains(down)) {
         queue.add(down);
         prev[down.x][down.y] = p;
       }
@@ -118,9 +192,6 @@ public class CreatureMonst extends Entity{
     }
 
     path = result; // Return the sequence of directions
-
-
-
   }
 
 
@@ -167,19 +238,29 @@ public class CreatureMonst extends Entity{
     }
 
     if (!moving) {
-      if (pathCounter >= this.stepsToResetPath || path[pathCounter] == null) {
-        setAction();
-        pathCounter = 0;
+
+      if (noPath && noPathCooldownCounter >= noPathCooldown) {
+        noPath = false;
+        noPathCooldownCounter = 0;
+      }
+      if (noPath && noPathCooldownCounter < noPathCooldown) {
+        noPathCooldownCounter++;
       } else {
+        if (pathCounter >= this.stepsToResetPath || path[pathCounter] == null) {
+          aStarPath();
+          pathCounter = 0;
+        }
         direction = path[pathCounter];
         pathCounter++;
-      }
-      // Check for collision after setting direction.
-      collisionOn = gp.cChecker.checkCollision(this) || gp.cChecker.objCollision(this) || gp.cChecker.checkOccupied(this);
+        // Check for collision after setting direction.
+        collisionOn =
+            gp.cChecker.checkCollision(this) || gp.cChecker.objCollision(this) || gp.cChecker
+                .checkOccupied(this);
 
-      // Start moving in the direction if no collision.
-      if (!collisionOn) {
-        startMoving();
+        // Start moving in the direction if no collision.
+        if (!collisionOn) {
+          startMoving();
+        }
       }
     }
   }
