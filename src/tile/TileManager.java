@@ -3,10 +3,13 @@ package tile;
 import Entities.Entity;
 import Levels.Level;
 import java.awt.Graphics2D;
+import java.awt.Point;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.Random;
 import javax.imageio.ImageIO;
 import main.GamePanel;
 import main.UtilityTool;
@@ -18,26 +21,18 @@ public class TileManager {
   public int mapTiles[][];
   public boolean occupiedTiles[][];
 
-  public TileManager(GamePanel gp) {
-    this.gp = gp;
-    tileTypes = new Tile[10];
-    mapTiles = new int[gp.worldCols][gp.worldRows];
-    occupiedTiles = new boolean[gp.worldCols][gp.worldRows];
-    getTileTypes();
-    loadMap("/maps/world01.txt");
-  }
-
   public TileManager(GamePanel gp, Level level) {
     this.gp = gp;
-    tileTypes = new Tile[10];
+    tileTypes = new Tile[40];
     mapTiles = new int[level.sizeX][level.sizeY];
     occupiedTiles = new boolean[gp.worldCols][gp.worldRows];
-    getTileTypes();
+    getTileTypes(level);
     loadMap(level.tilesFilePath);
     setOccupiedTiles();
   }
 
-  public void getTileTypes() {
+  public void getTileTypes(Level level) {
+    /*
     setup(0, "grass", false);
     setup(1, "wall", true);
 
@@ -46,7 +41,12 @@ public class TileManager {
     setup(3, "dirt", false);
 
     setup(4, "tree", true);
-    setup(5, "sand", false);
+    setup(5, "sand", false);*/
+    //tileTypes = new Tile[40];
+    Tile[] levelTiles = level.levelTiles();
+    for (int i = 0; i <levelTiles.length; i++) {
+      tileTypes[i] = levelTiles[i];
+    }
   }
 
   public void setup(int index, String imagePath, boolean collision) {
@@ -71,7 +71,7 @@ public class TileManager {
       // Loop through rows
       for (int i = 0; i < gp.worldRows; i++) {
         String line = br.readLine();  // Read each line (which represents a row)
-        String numbers[] = line.split(" ");  // Split the line into columns (space-separated)
+        String numbers[] = line.split(",");  // Split the line into columns (space-separated)
 
         // Loop through columns
         for (int j = 0; j < gp.worldCols; j++) {
@@ -95,6 +95,7 @@ public class TileManager {
   }
 
   public boolean collisionAt(int x, int y) {
+    //System.out.println("collisionat");
     return tileTypes[mapTiles[x][y]].collision;
   }
 
@@ -108,11 +109,12 @@ public class TileManager {
         int screenX = worldX - gp.player.worldX + gp.player.screenX;
         int screenY = worldY - gp.player.worldY + gp.player.screenY;
 
-        if (screenX > gp.player.screenX - (gp.screenWidth / 2) - 48
-            && screenX < gp.player.screenX + (gp.screenWidth / 2) + 48 &&
-            screenY < gp.player.screenY + (gp.screenHeight / 2) + 48
-            && screenY > gp.player.screenY - (gp.screenHeight / 2)
-            - 48) {  // Correct the screen bounds check
+        int tS = gp.tileSize;
+
+        if (screenX > gp.player.screenX - (gp.screenWidth / 2) - tS
+            && screenX < gp.player.screenX + (gp.screenWidth / 2) + tS &&
+            screenY < gp.player.screenY + (gp.screenHeight / 2) + tS
+            && screenY > gp.player.screenY - (gp.screenHeight / 2) - tS) {  // Correct the screen bounds check
           g2.drawImage(tileTypes[t].image, screenX, screenY, null);
         }
       }
@@ -131,6 +133,23 @@ public class TileManager {
     if (collisionAt(x, y)) {
       return false;
     }
+    //if (occupiedTiles[x][y]) {
+    //  return false;
+    //}
     return true;
+  }
+
+  public Point randomSpawnablePoint() {
+    ArrayList<Point> spawnablePoints = new ArrayList<>();
+    for (int x = 0; x < gp.worldCols; x++) {
+      for (int y = 0; y < gp.worldCols; y++) {
+        if (walkableTile(x, y)) {
+          spawnablePoints.add(new Point(x, y));
+        }
+      }
+    }
+    Random rand = new Random();
+    int pointIndex = rand.nextInt(spawnablePoints.size());
+    return spawnablePoints.get(pointIndex);
   }
 }

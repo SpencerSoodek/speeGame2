@@ -20,7 +20,6 @@ public class UI {
   public UI(GamePanel gp) {
     this.gp = gp;
     arial_40 = new Font("Arial", Font.PLAIN, 40);
-    arial_40 = new Font("Arial", Font.PLAIN, 20);
     KeyObj key = new KeyObj(0,0);
     keyImage = key.image;
   }
@@ -36,6 +35,9 @@ public class UI {
     g2.setColor(Color.white);
     g2.drawImage(keyImage, 30, 30, gp.tileSize, gp.tileSize, null);
     g2.drawString("x "+ gp.player.keys, 80, 65);
+    g2.setColor(Color.RED);
+    g2.setFont(g2.getFont().deriveFont(30F));
+    g2.drawString("HEALTH: " + gp.player.health + " /" + gp.player.maxHealth, gp.tileSize /2, gp.screenHeight * .75f);
 
     if (messageOn == true) {
       g2.setFont(g2.getFont().deriveFont(30F));

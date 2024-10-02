@@ -4,6 +4,7 @@ import Entities.Entity;
 import Entities.MonsterManager;
 import Objects.ObjectManager;
 import main.GamePanel;
+import tile.Tile;
 
 public class Level {
   public int sizeX;
@@ -14,6 +15,11 @@ public class Level {
   public GamePanel gp;
   public ObjectManager om;
   public MonsterManager monstM;
+
+  public Tile[] levelTiles(){
+    Tile[] tiles = new Tile[40];
+    return tiles;
+  }
 
 
 }

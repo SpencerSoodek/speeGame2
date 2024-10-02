@@ -9,7 +9,6 @@ import Objects.GameObject;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import main.GamePanel;
-import tile.Tile;
 
 public class Player extends Entity {
 
@@ -32,62 +31,68 @@ public class Player extends Entity {
     this.keys = 0;
     this.stepRate = 30;
 
-    moving = false;
+    this.attackCooldown = 30;
+    this.attackCooldownCounter = 30;
+
+    state = EntityState.IDLE;
+
+    this.maxHealth = 10;
+    this.health = maxHealth;
   }
+
+  public void meleeAttack() {
+    int attackX = col;
+    int attackY = row;
+    switch (direction) {
+      case UP:
+        attackY--;
+        break;
+      case DOWN:
+        attackY++;
+        break;
+      case RIGHT:
+        attackX++;
+        break;
+      case LEFT:
+        attackX --;
+        break;
+    }
+    for (int i = 0; i < gp.gameLevel.monstM.monsters.length; i++) {
+      Entity m = gp.gameLevel.monstM.monsters[i];
+      if (m != null) {
+        if (m.col == attackX && m.row == attackY) {
+          /*
+          m.health -= 1;
+          System.out.println("monster health: " + m.health);
+          if (m.health <= 0) {
+            gp.gameLevel.monstM.killMonster(i);
+          }
+          */
+          gp.gameLevel.monstM.damageMonster(i, 1);
+        }
+      }
+    }
+  }
+
 
   public void update() {
     // If currently moving, continue moving until reaching the target position.
-    if (moving) {
-      switch (direction) {
-        case UP:
-          if (worldY <= targetY) {
-            worldY = targetY;  // Snap to the grid.
-            moving = false;
-            row--;  // Update row after movement completes.
-            checkInteractions();
-            System.out.println("X: " + col + " Y: " + row + " occupied: " + gp.tileM.occupiedTiles[col][row]);
-          } else {
-            worldY -= speed;
-          }
-          break;
-        case DOWN:
-          if (worldY >= targetY) {
-            worldY = targetY;
-            moving = false;
-            row++;
-            checkInteractions();
-            System.out.println("X: " + col + " Y: " + row + " occupied: " + gp.tileM.occupiedTiles[col][row]);
-          } else {
-            worldY += speed;
-          }
-          break;
-        case LEFT:
-          if (worldX <= targetX) {
-            worldX = targetX;
-            moving = false;
-            col--;
-            checkInteractions();
-            System.out.println("X: " + col + " Y: " + row + " occupied: " + gp.tileM.occupiedTiles[col][row]);
-          } else {
-            worldX -= speed;
-          }
-          break;
-        case RIGHT:
-          if (worldX >= targetX) {
-            worldX = targetX;
-            moving = false;
-            col++;
-            checkInteractions();
-            System.out.println("X: " + col + " Y: " + row + " occupied: " + gp.tileM.occupiedTiles[col][row]);
-          } else {
-            worldX += speed;
-          }
-          break;
+    if (state == EntityState.MOVE) {
+      keepMovingInDirection();
+    }
+    if (attackCooldownCounter > attackCooldown && !betweenTiles) {
+      if (state == EntityState.ATTACK) {
+        this.state = EntityState.IDLE;
+      }
+      if (gp.kh.spacePressed) {
+        state = EntityState.ATTACK;
+        meleeAttack();
+        attackCooldownCounter = 0;
       }
     }
 
     // If no movement and a key is pressed, set direction and check collision.
-    if (!moving && (gp.kh.upPressed || gp.kh.downPressed || gp.kh.leftPressed
+    if (state == EntityState.IDLE && (gp.kh.upPressed || gp.kh.downPressed || gp.kh.leftPressed
         || gp.kh.rightPressed)) {
       // Set direction based on key pressed.
       if (gp.kh.upPressed) {
@@ -102,13 +107,19 @@ public class Player extends Entity {
 
       // Check for collision after setting direction.
       collisionOn =
-          gp.cChecker.checkCollision(this) || gp.cChecker.objCollision(this) || gp.cChecker.checkOccupied(this);
+          gp.cChecker.checkCollision(this) || gp.cChecker.objCollision(this) || gp.cChecker
+              .checkOccupied(this);
 
       // Start moving in the direction if no collision.
       if (!collisionOn) {
         startMoving();
       }
     }
+    attackCooldownCounter++;
+  }
+
+  public void onReachedTile() {
+    checkInteractions();
   }
 
   public void checkInteractions() {
@@ -153,24 +164,6 @@ public class Player extends Entity {
 
     secondStep();
     BufferedImage im = getCurrImage();
-    /*
-    BufferedImage im = null;
-    switch (direction) {
-      case DOWN:
-        im = down1;
-        break;
-      case LEFT:
-        im = left1;
-        break;
-      case RIGHT:
-        im = right1;
-        break;
-      case UP:
-        im = up1;
-        break;
-
-    }
-     */
     g2.drawImage(im, screenX, screenY, null);
 
   }
